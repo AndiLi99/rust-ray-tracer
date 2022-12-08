@@ -123,5 +123,23 @@ fn write_color(color: Color) {
         convert_to_int(color.2)
     );
 }
-type Point = Vec3;
+type Point3 = Vec3;
 type Color = Vec3;
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+struct Ray {
+    orig: Point3,
+    dir: Vec3,
+}
+
+impl Ray {
+    fn origin(self) -> Point3 {
+        self.orig
+    }
+    fn direction(self) -> Vec3 {
+        self.dir
+    }
+    fn at(self, t: f64) -> Point3 {
+        self.orig + t*self.dir
+    }
+}
