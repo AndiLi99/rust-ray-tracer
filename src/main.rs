@@ -1,31 +1,44 @@
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::{
+    ops::{Add, Div, Mul, Neg, Sub},
+    vec,
+};
 
-fn hit_sphere(center: Point, radius: f64, ray: Ray) -> bool {
+fn hit_sphere(center: Point, radius: f64, ray: Ray) -> f64 {
     let orig_to_center: Vec3 = ray.origin() - center;
-    let a: f64 = ray.dir.dot(ray.dir);
-    let b: f64 = 2. * ray.dir.dot(orig_to_center);
-    let c: f64 = orig_to_center.dot(orig_to_center) - radius*radius;
-    let determinant: f64 = b*b - 4.*a*c;
-    determinant > 0.
+    let a: f64 = ray.dir.length_squared();
+    let half_b: f64 = ray.dir.dot(orig_to_center);
+    let c: f64 = orig_to_center.length_squared() - radius * radius;
+    let determinant: f64 = half_b * half_b - a * c;
+    if determinant < 0. {
+        -1.
+    } else {
+        (-half_b - determinant.sqrt()) / (a)
+    }
 }
 
 fn lerp(t: f64, start: Vec3, end: Vec3) -> Vec3 {
-    (1.0 - t) * start + t* end
+    (1.0 - t) * start + t * end
 }
 
-fn ray_color(ray: Ray) -> Color {
-    if hit_sphere(Vec3(0., 0., -1.), 0.5, ray) {
-        return Vec3(1.0, 0., 0.);
+fn ray_color<T: Hittable>(ray: Ray, world: &T) -> Color {
+    let hit_record = world.hit(ray, 0., f64::INFINITY);
+
+    match hit_record {
+        Some(record) => {
+            0.5 * (record.normal + Color::color(1., 1., 1.))
+        },
+        None => {
+            let unit_direction: Vec3 = ray.direction().unit_vector();
+            let t = 0.5 * (unit_direction.y() + 1.0);
+            let white: Color = Vec3(1.0, 1.0, 1.0);
+            let blue: Color = Vec3(0.5, 0.7, 1.0);
+            lerp(t, white, blue)
+        }
     }
-    let unit_direction: Vec3 = ray.direction().unit_vector();
-    let t = 0.5*(unit_direction.y() + 1.0);
-    let white: Color = Vec3(1.0, 1.0, 1.0);
-    let blue: Color = Vec3(0.5, 0.7, 1.0);
-    lerp(t, white, blue)
 }
 fn main() {
     // Image
-    let aspect_ratio: f64 = 16.0/9.0; // width divided by height
+    let aspect_ratio: f64 = 16.0 / 9.0; // width divided by height
     let image_width: i64 = 400;
     let image_height: i64 = (image_width as f64 / aspect_ratio) as i64;
 
@@ -38,8 +51,13 @@ fn main() {
     let origin: Point = Vec3(0.0, 0.0, 0.0);
     let horizontal = Vec3(viewport_width, 0.0, 0.0);
     let vertical = Vec3(0.0, viewport_height, 0.0);
-    let lower_left_corner = origin - horizontal / 2.0 - vertical/2.0 - Vec3(0.0, 0.0, focal_length);
+    let lower_left_corner =
+        origin - horizontal / 2.0 - vertical / 2.0 - Vec3(0.0, 0.0, focal_length);
 
+    // World
+    let mut world: HittableList = HittableList::new();
+    world.add(Box::new(Sphere::new(Point::point(0., 0., -1.), 0.5)));
+    world.add(Box::new(Sphere::new(Point::point(0., -100.5, -1.), 100.)));
 
 
     // Render
@@ -52,8 +70,11 @@ fn main() {
         for x in 0..image_width {
             let u: f64 = x as f64 / (image_width as f64 - 1.);
             let v: f64 = y as f64 / (image_height as f64 - 1.);
-            let ray: Ray = Ray{orig: origin, dir: lower_left_corner + u*horizontal + v*vertical - origin};
-            let color: Color = ray_color(ray);
+            let ray: Ray = Ray {
+                orig: origin,
+                dir: lower_left_corner + u * horizontal + v * vertical - origin,
+            };
+            let color: Color = ray_color(ray, &world);
 
             write_color(color);
         }
@@ -116,8 +137,11 @@ impl Neg for Vec3 {
     }
 }
 impl Vec3 {
+    fn origin() -> Vec3 {
+        Vec3(0.0, 0.0, 0.0)
+    }
     fn dot(self, rhs: Self) -> f64 {
-        self.x() * rhs.x() +self.y() * rhs.y() + self.z() * rhs.z()
+        self.x() * rhs.x() + self.y() * rhs.y() + self.z() * rhs.z()
     }
     fn cross(lhs: Self, rhs: Self) -> Self {
         Self(
@@ -162,12 +186,12 @@ type Point = Vec3;
 type Color = Vec3;
 
 impl Point {
-    fn point(x:f64, y:f64, z:f64) -> Point {
+    fn point(x: f64, y: f64, z: f64) -> Point {
         Vec3(x, y, z)
     }
 }
 impl Color {
-    fn color(x:f64, y:f64, z:f64) -> Color {
+    fn color(x: f64, y: f64, z: f64) -> Color {
         Vec3(x, y, z)
     }
 }
@@ -186,6 +210,92 @@ impl Ray {
         self.dir
     }
     fn at(self, t: f64) -> Point {
-        self.orig + t*self.dir
+        self.orig + t * self.dir
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+struct HitRecord {
+    p: Point,
+    normal: Vec3,
+    t: f64,
+    front_face: bool,
+}
+
+impl HitRecord {
+    fn new(ray: Ray, t: f64, outward_normal: Vec3) -> HitRecord {
+        let front_face: bool = ray.dir.dot(outward_normal) <= 0.;
+        let normal = if front_face {
+            outward_normal
+        } else {
+            -outward_normal
+        };
+        HitRecord {
+            p: ray.at(t),
+            normal: normal,
+            t: t,
+            front_face: front_face,
+        }
+    }
+}
+
+trait Hittable {
+    fn hit(&self, ray: Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+struct Sphere {
+    center: Point,
+    radius: f64,
+}
+impl Sphere {
+    fn new(center: Point, radius: f64) -> Sphere {
+        Sphere { center: center, radius: radius }
+    }
+}
+
+impl Hittable for Sphere {
+    fn hit(&self, ray: Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        let orig_to_center: Vec3 = ray.origin() - self.center;
+        let a: f64 = ray.dir.length_squared();
+        let half_b: f64 = ray.dir.dot(orig_to_center);
+        let c: f64 = orig_to_center.length_squared() - self.radius.powi(2);
+        let determinant: f64 = half_b * half_b - a * c;
+        if determinant < 0. {
+            return None;
+        }
+        let mut root = (-half_b - determinant.sqrt()) / (a);
+        if root < t_min || t_max < root {
+            root = (-half_b + determinant.sqrt()) / (a);
+            if root < t_min || t_max < root {
+                return None;
+            }
+        }
+        let hit_point: Point = ray.at(root);
+        let outward_normal: Vec3 = (hit_point - self.center) / self.radius;
+        Some(HitRecord::new(ray, root, outward_normal))
+    }
+}
+
+struct HittableList {
+    list: Vec<Box<dyn Hittable>>,
+}
+
+impl Hittable for HittableList {
+    fn hit(&self, ray: Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        self.list
+            .iter()
+            .filter_map(|x| x.hit(ray, t_min, t_max))
+            .min_by(|a, b| a.t.partial_cmp(&b.t).unwrap())
+    }
+}
+
+impl HittableList {
+    fn add(&mut self, hittable: Box<dyn Hittable>) {
+        self.list.push(hittable)
+    }
+
+    fn new() -> HittableList {
+        HittableList { list: Vec::new() }
     }
 }
