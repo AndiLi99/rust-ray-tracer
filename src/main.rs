@@ -1,10 +1,46 @@
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
+fn hit_sphere(center: Point, radius: f64, ray: Ray) -> bool {
+    let orig_to_center: Vec3 = ray.origin() - center;
+    let a: f64 = ray.dir.dot(ray.dir);
+    let b: f64 = 2. * ray.dir.dot(orig_to_center);
+    let c: f64 = orig_to_center.dot(orig_to_center) - radius*radius;
+    let determinant: f64 = b*b - 4.*a*c;
+    determinant > 0.
+}
+
+fn lerp(t: f64, start: Vec3, end: Vec3) -> Vec3 {
+    (1.0 - t) * start + t* end
+}
+
+fn ray_color(ray: Ray) -> Color {
+    if hit_sphere(Vec3(0., 0., -1.), 0.5, ray) {
+        return Vec3(1.0, 0., 0.);
+    }
+    let unit_direction: Vec3 = ray.direction().unit_vector();
+    let t = 0.5*(unit_direction.y() + 1.0);
+    let white: Color = Vec3(1.0, 1.0, 1.0);
+    let blue: Color = Vec3(0.5, 0.7, 1.0);
+    lerp(t, white, blue)
+}
 fn main() {
     // Image
+    let aspect_ratio: f64 = 16.0/9.0; // width divided by height
+    let image_width: i64 = 400;
+    let image_height: i64 = (image_width as f64 / aspect_ratio) as i64;
 
-    let image_width: i64 = 256;
-    let image_height: i64 = 256;
+    // Camera
+
+    let viewport_height: f64 = 2.0;
+    let viewport_width: f64 = aspect_ratio * viewport_height;
+    let focal_length: f64 = 1.0;
+
+    let origin: Point = Vec3(0.0, 0.0, 0.0);
+    let horizontal = Vec3(viewport_width, 0.0, 0.0);
+    let vertical = Vec3(0.0, viewport_height, 0.0);
+    let lower_left_corner = origin - horizontal / 2.0 - vertical/2.0 - Vec3(0.0, 0.0, focal_length);
+
+
 
     // Render
 
@@ -14,11 +50,10 @@ fn main() {
     for y in (0..image_height).rev() {
         eprint!("\rScanlines remaining: {}", y);
         for x in 0..image_width {
-            let color: Color = Vec3(
-                (x as f64) / ((image_height - 1) as f64),
-                (y as f64) / ((image_width - 1) as f64),
-                0.25,
-            );
+            let u: f64 = x as f64 / (image_width as f64 - 1.);
+            let v: f64 = y as f64 / (image_height as f64 - 1.);
+            let ray: Ray = Ray{orig: origin, dir: lower_left_corner + u*horizontal + v*vertical - origin};
+            let color: Color = ray_color(ray);
 
             write_color(color);
         }
@@ -81,8 +116,8 @@ impl Neg for Vec3 {
     }
 }
 impl Vec3 {
-    fn dot(lhs: Self, rhs: Self) -> Self {
-        Self(lhs.x() * rhs.x(), lhs.y() * rhs.y(), lhs.z() * rhs.z())
+    fn dot(self, rhs: Self) -> f64 {
+        self.x() * rhs.x() +self.y() * rhs.y() + self.z() * rhs.z()
     }
     fn cross(lhs: Self, rhs: Self) -> Self {
         Self(
@@ -123,23 +158,34 @@ fn write_color(color: Color) {
         convert_to_int(color.2)
     );
 }
-type Point3 = Vec3;
+type Point = Vec3;
 type Color = Vec3;
+
+impl Point {
+    fn point(x:f64, y:f64, z:f64) -> Point {
+        Vec3(x, y, z)
+    }
+}
+impl Color {
+    fn color(x:f64, y:f64, z:f64) -> Color {
+        Vec3(x, y, z)
+    }
+}
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 struct Ray {
-    orig: Point3,
+    orig: Point,
     dir: Vec3,
 }
 
 impl Ray {
-    fn origin(self) -> Point3 {
+    fn origin(self) -> Point {
         self.orig
     }
     fn direction(self) -> Vec3 {
         self.dir
     }
-    fn at(self, t: f64) -> Point3 {
+    fn at(self, t: f64) -> Point {
         self.orig + t*self.dir
     }
 }
