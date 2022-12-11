@@ -100,4 +100,7 @@ impl Color {
     pub fn color(x: f64, y: f64, z: f64) -> Color {
         Vec3(x, y, z)
     }
+    pub fn black() -> Color {
+        Vec3(0., 0., 0.)
+    }
 }
