@@ -1,7 +1,23 @@
 use std::ops::{Add, Div, Mul, Neg, Sub};
+use rand::distributions::{Distribution, Standard};
+use rand::Rng;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Vec3(pub f64, pub f64, pub f64);
+
+impl Distribution<Vec3> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Vec3 {
+        let (x, y, z) = rng.gen();
+        Vec3(x, y, z)
+    }
+}
+
+impl Add<Vec3> for f64 {
+    type Output = Vec3;
+    fn add(self, rhs: Vec3) -> Self::Output {
+        Vec3(rhs.0 + self, rhs.1 + self, rhs.2 + self)
+    }
+}
 
 impl Add for Vec3 {
     type Output = Self;

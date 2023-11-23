@@ -4,6 +4,7 @@ use crate::vec3::{Point, Vec3};
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct HitRecord {
     p: Point,
+    // Always points outward to the ray that hit it
     normal: Vec3,
     t: f64,
     front_face: bool,
