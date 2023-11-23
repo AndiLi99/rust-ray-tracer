@@ -20,9 +20,9 @@ use rand::rngs::ThreadRng;
 use rand::Rng;
 
 fn ray_color<T: Hittable>(ray: Ray, world: &T, depth: i32, rng: &mut ThreadRng) -> Color {
-    // Due to subtle bug with floating point rounding, the calculated intersection point 
+    // Due to subtle bug with floating point rounding, the calculated intersection point
     // which is the origin of the next ray can be sligthly off.
-    // That point could be slightly above or below the surface of the sphere, 
+    // That point could be slightly above or below the surface of the sphere,
     // if it is below, it could hit the same sphere again.
     // Solution: make the ray ignore hits within a small distance
     let hit_record = world.hit(ray, 0.001, f64::INFINITY);
@@ -34,12 +34,7 @@ fn ray_color<T: Hittable>(ray: Ray, world: &T, depth: i32, rng: &mut ThreadRng) 
     match hit_record {
         Some(record) => {
             let direction = record.normal() + random_vec_on_unit_sphere(rng);
-            0.5 * ray_color(
-                Ray::new(record.p(), direction),
-                world,
-                depth - 1,
-                rng,
-            )
+            0.5 * ray_color(Ray::new(record.p(), direction), world, depth - 1, rng)
         }
         None => {
             let unit_direction: Vec3 = ray.direction().unit_vector();
@@ -66,11 +61,11 @@ fn random_vec_in_unit_sphere(rng: &mut ThreadRng) -> Vec3 {
 fn random_vec_on_unit_sphere(rng: &mut ThreadRng) -> Vec3 {
     random_vec_in_unit_sphere(rng).unit_vector()
 }
-fn random_vec_on_hemisphere(rng: &mut ThreadRng, normal: Vec3) -> Vec3{
+fn random_vec_on_hemisphere(rng: &mut ThreadRng, normal: Vec3) -> Vec3 {
     let on_unit_sphere = random_vec_on_unit_sphere(rng);
     if on_unit_sphere.dot(normal) > 0. {
         on_unit_sphere
-    } else {    
+    } else {
         -on_unit_sphere
     }
 }
