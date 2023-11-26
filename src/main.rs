@@ -11,7 +11,7 @@ mod vec3;
 use camera::Camera;
 use hittable::Hittable;
 use hittable_list::HittableList;
-use material::{Lambertian, Scatterable};
+use material::{Lambertian, Scatterable, Metal};
 use ppm::write_color;
 use ray::Ray;
 use sphere::Sphere;
@@ -58,16 +58,21 @@ fn main() {
 
     // Camera
 
-    let viewport_height: f64 = 2.0;
+    let vertical_fov: f64 = 45.;
     let focal_length: f64 = 1.0;
 
-    let camera: Camera = Camera::new(aspect_ratio, viewport_height, focal_length);
+    let camera: Camera = Camera::new(aspect_ratio, vertical_fov, focal_length);
     // World
     let mut world: HittableList = HittableList::new();
     world.add(Box::new(Sphere::new(
-        Point::point(0., 0., -1.),
+        Point::point(0.5, 0., -1.),
         0.5,
         material::Material::Lambertian(Lambertian::new(Color::color(1.0, 0.0, 0.0))),
+    )));
+    world.add(Box::new(Sphere::new(
+        Point::point(-0.5, 0., -1.),
+        0.5,
+        material::Material::Metal(Metal::new(Color::color(0.9, 0.9, 0.9))),
     )));
     world.add(Box::new(Sphere::new(
         Point::point(0., -100.5, -1.),

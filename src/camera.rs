@@ -13,9 +13,13 @@ pub struct Camera {
     vertical: Vec3,
     lower_left_corner: Point,
 }
-
+///
+/// vertical fov = degrees of vertical view
 impl Camera {
-    pub fn new(aspect_ratio: f64, viewport_height: f64, focal_length: f64) -> Camera {
+    pub fn new(aspect_ratio: f64, v_fov: f64, focal_length: f64) -> Camera {
+        // ration of height to focal length
+        let height_ratio = (v_fov.to_radians()/2.0).tan();
+        let viewport_height = 2.0*height_ratio*focal_length;
         let viewport_width: f64 = aspect_ratio * viewport_height;
 
         let origin: Point = Vec3(0.0, 0.0, 0.0);

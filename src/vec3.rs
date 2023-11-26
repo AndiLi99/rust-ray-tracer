@@ -131,6 +131,9 @@ impl Vec3 {
         let s = 1e-8;
         self.0.abs() < s && self.1.abs() < s && self.2.abs() < s
     }
+    pub fn reflect(&self, normal: Vec3) -> Vec3{
+        *self - 2.*self.dot(normal)*normal
+    }
 }
 
 pub type Point = Vec3;
