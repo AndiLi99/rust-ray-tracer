@@ -1,6 +1,6 @@
-use std::ops::{Add, Div, Mul, Neg, Sub};
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Vec3(pub f64, pub f64, pub f64);
@@ -101,6 +101,35 @@ impl Vec3 {
     }
     pub fn z(self) -> f64 {
         self.2
+    }
+
+    fn map_to_range(v: Vec3, min: f64, max: f64) -> Vec3 {
+        min + (max - min) * v
+    }
+    pub fn random_vec_in_unit_sphere() -> Vec3 {
+        let mut rng = rand::thread_rng();
+        for _ in 0..10000 {
+            let p: Vec3 = Vec3::map_to_range(rng.gen(), -1., 1.);
+            if p.length_squared() < 1. {
+                return p;
+            }
+        }
+        panic!("Could not find a random vector in the unit sphere!")
+    }
+    pub fn random_vec_on_unit_sphere() -> Vec3 {
+        Vec3::random_vec_in_unit_sphere().unit_vector()
+    }
+    pub fn random_vec_on_hemisphere(normal: Vec3) -> Vec3 {
+        let on_unit_sphere = Vec3::random_vec_on_unit_sphere();
+        if on_unit_sphere.dot(normal) > 0. {
+            on_unit_sphere
+        } else {
+            -on_unit_sphere
+        }
+    }
+    pub fn near_zero(&self) -> bool {
+        let s = 1e-8;
+        self.0.abs() < s && self.1.abs() < s && self.2.abs() < s
     }
 }
 

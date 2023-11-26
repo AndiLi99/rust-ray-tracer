@@ -1,6 +1,7 @@
 mod camera;
 mod hittable;
 mod hittable_list;
+mod material;
 mod ppm;
 mod ray;
 mod sphere;
@@ -10,6 +11,7 @@ mod vec3;
 use camera::Camera;
 use hittable::Hittable;
 use hittable_list::HittableList;
+use material::{Lambertian, Scatterable};
 use ppm::write_color;
 use ray::Ray;
 use sphere::Sphere;
@@ -33,8 +35,8 @@ fn ray_color<T: Hittable>(ray: Ray, world: &T, depth: i32, rng: &mut ThreadRng) 
 
     match hit_record {
         Some(record) => {
-            let direction = record.normal() + random_vec_on_unit_sphere(rng);
-            0.5 * ray_color(Ray::new(record.p(), direction), world, depth - 1, rng)
+            let scattered = record.material().scatter(ray, record);
+            *scattered.attenuation() * ray_color(*scattered.ray(), world, depth - 1, rng)
         }
         None => {
             let unit_direction: Vec3 = ray.direction().unit_vector();
@@ -46,29 +48,6 @@ fn ray_color<T: Hittable>(ray: Ray, world: &T, depth: i32, rng: &mut ThreadRng) 
     }
 }
 
-fn map_to_range(v: Vec3, min: f64, max: f64) -> Vec3 {
-    min + (max - min) * v
-}
-fn random_vec_in_unit_sphere(rng: &mut ThreadRng) -> Vec3 {
-    for _ in 0..10000 {
-        let p: Vec3 = map_to_range(rng.gen(), -1., 1.);
-        if p.length_squared() < 1. {
-            return p;
-        }
-    }
-    panic!("Could not find a random vector in the unit sphere!")
-}
-fn random_vec_on_unit_sphere(rng: &mut ThreadRng) -> Vec3 {
-    random_vec_in_unit_sphere(rng).unit_vector()
-}
-fn random_vec_on_hemisphere(rng: &mut ThreadRng, normal: Vec3) -> Vec3 {
-    let on_unit_sphere = random_vec_on_unit_sphere(rng);
-    if on_unit_sphere.dot(normal) > 0. {
-        on_unit_sphere
-    } else {
-        -on_unit_sphere
-    }
-}
 fn main() {
     // Image
     let aspect_ratio: f64 = 16.0 / 9.0; // width divided by height
@@ -85,8 +64,16 @@ fn main() {
     let camera: Camera = Camera::new(aspect_ratio, viewport_height, focal_length);
     // World
     let mut world: HittableList = HittableList::new();
-    world.add(Box::new(Sphere::new(Point::point(0., 0., -1.), 0.5)));
-    world.add(Box::new(Sphere::new(Point::point(0., -100.5, -1.), 100.)));
+    world.add(Box::new(Sphere::new(
+        Point::point(0., 0., -1.),
+        0.5,
+        material::Material::Lambertian(Lambertian::new(Color::color(1.0, 0.0, 0.0))),
+    )));
+    world.add(Box::new(Sphere::new(
+        Point::point(0., -100.5, -1.),
+        100.,
+        material::Material::Lambertian(Lambertian::new(Color::color(0.0, 1.0, 0.0))),
+    )));
 
     // rng
     let mut rng = rand::thread_rng();

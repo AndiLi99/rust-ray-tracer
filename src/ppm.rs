@@ -1,6 +1,6 @@
 use crate::vec3::Color;
 
-pub fn write_color(color: Color, samples_per_pixel: i64) -> String{
+pub fn write_color(color: Color, samples_per_pixel: i64) -> String {
     fn convert_to_int(f: f64) -> u8 {
         (255.999 * f.clamp(0.0, 0.999)) as u8
     }
