@@ -36,7 +36,10 @@ fn ray_color<T: Hittable>(ray: Ray, world: &T, depth: i32, rng: &mut ThreadRng) 
     match hit_record {
         Some(record) => {
             let scattered = record.material().scatter(ray, record);
-            *scattered.attenuation() * ray_color(*scattered.ray(), world, depth - 1, rng)
+            match scattered {
+                Some(s) => *s.attenuation() * ray_color(*s.ray(), world, depth - 1, rng),
+                None => Color::black(),
+            }
         }
         None => {
             let unit_direction: Vec3 = ray.direction().unit_vector();
@@ -58,28 +61,39 @@ fn main() {
 
     // Camera
 
-    let vertical_fov: f64 = 45.;
+    let vertical_fov: f64 = 90.;
     let focal_length: f64 = 1.0;
 
     let camera: Camera = Camera::new(aspect_ratio, vertical_fov, focal_length);
+
+    // Materials
+    let ground = material::Material::Lambertian(Lambertian::new(Color::color(0.8, 0.8, 0.0)));
+    let mat_center = material::Material::Lambertian(Lambertian::new(Color::color(0.7, 0.3, 0.3)));
+    let mat_left = material::Material::Metal(Metal::new(Color::color(0.8, 0.8, 0.8), 0.3));
+    let mat_right = material::Material::Metal(Metal::new(Color::color(0.8, 0.6, 0.2), 1.0));
+
     // World
     let mut world: HittableList = HittableList::new();
     world.add(Box::new(Sphere::new(
-        Point::point(0.5, 0., -1.),
-        0.5,
-        material::Material::Lambertian(Lambertian::new(Color::color(1.0, 0.0, 0.0))),
-    )));
-    world.add(Box::new(Sphere::new(
-        Point::point(-0.5, 0., -1.),
-        0.5,
-        material::Material::Metal(Metal::new(Color::color(0.9, 0.9, 0.9))),
-    )));
-    world.add(Box::new(Sphere::new(
         Point::point(0., -100.5, -1.),
         100.,
-        material::Material::Lambertian(Lambertian::new(Color::color(0.0, 1.0, 0.0))),
+        ground,
     )));
-
+    world.add(Box::new(Sphere::new(
+        Point::point(0., 0., -1.),
+        0.5,
+        mat_center,
+    )));
+    world.add(Box::new(Sphere::new(
+        Point::point(1., 0., -1.),
+        0.5,
+        mat_left,
+    )));
+    world.add(Box::new(Sphere::new(
+        Point::point(-1., 0., -1.),
+        0.5,
+        mat_right,
+    )));
     // rng
     let mut rng = rand::thread_rng();
 

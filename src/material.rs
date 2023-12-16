@@ -22,7 +22,7 @@ impl ScatterRecord {
 }
 
 pub trait Scatterable {
-    fn scatter(self, in_ray: Ray, hit_record: HitRecord) -> ScatterRecord;
+    fn scatter(self, in_ray: Ray, hit_record: HitRecord) -> Option<ScatterRecord>;
 }
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Material {
@@ -31,7 +31,7 @@ pub enum Material {
 }
 
 impl Scatterable for Material {
-    fn scatter(self, in_ray: Ray, hit_record: HitRecord) -> ScatterRecord {
+    fn scatter(self, in_ray: Ray, hit_record: HitRecord) -> Option<ScatterRecord> {
         match self {
             Material::Lambertian(l) => l.scatter(in_ray, hit_record),
             Material::Metal(m) => m.scatter(in_ray, hit_record),
@@ -44,7 +44,7 @@ pub struct Lambertian {
 }
 
 impl Scatterable for Lambertian {
-    fn scatter(self, in_ray: Ray, hit_record: HitRecord) -> ScatterRecord {
+    fn scatter(self, in_ray: Ray, hit_record: HitRecord) -> Option<ScatterRecord> {
         let direction = hit_record.normal() + Vec3::random_vec_on_unit_sphere();
 
         let direction = if direction.near_zero() {
@@ -53,10 +53,10 @@ impl Scatterable for Lambertian {
             direction
         };
 
-        ScatterRecord {
+        Some(ScatterRecord {
             ray: Ray::new(hit_record.p(), direction),
             attenuation: self.albedo,
-        }
+        })
     }
 }
 
@@ -69,21 +69,26 @@ impl Lambertian {
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Metal {
     albedo: Color,
+    fuzz: f64,
 }
 
 impl Scatterable for Metal {
-    fn scatter(self, in_ray: Ray, hit_record: HitRecord) -> ScatterRecord {
-        let direction = in_ray.direction().reflect(hit_record.normal());
+    fn scatter(self, in_ray: Ray, hit_record: HitRecord) -> Option<ScatterRecord> {
+        let direction = in_ray.direction().reflect(hit_record.normal()) + Vec3::random_vec_on_unit_sphere()*self.fuzz*hit_record.normal().dot(-in_ray.direction());
 
-        ScatterRecord {
-            ray: Ray::new(hit_record.p(), direction),
-            attenuation: self.albedo,
+        if hit_record.normal().dot(direction) > 0. {
+            Some(ScatterRecord {
+                ray: Ray::new(hit_record.p(), direction),
+                attenuation: self.albedo,
+            })
+        } else {
+            None
         }
     }
 }
 
 impl Metal {
-    pub fn new(color: Color) -> Metal {
-        Metal { albedo: color }
+    pub fn new(color: Color, fuzz:f64) -> Metal {
+        Metal { albedo: color, fuzz: fuzz }
     }
 }

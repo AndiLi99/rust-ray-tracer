@@ -10,7 +10,7 @@ impl Ray {
     pub fn new(orig: Point, dir: Vec3) -> Self {
         Ray {
             orig: orig,
-            dir: dir,
+            dir: dir.unit_vector(),
         }
     }
     pub fn origin(self) -> Point {
