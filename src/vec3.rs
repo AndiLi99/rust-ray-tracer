@@ -1,5 +1,5 @@
 use rand::distributions::{Distribution, Standard};
-use rand::Rng;
+use rand::{Rng, SeedableRng};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -107,9 +107,10 @@ impl Vec3 {
         min + (max - min) * v
     }
     pub fn random_vec_in_unit_sphere() -> Vec3 {
-        let mut rng = rand::thread_rng();
+        let thread_rng = rand::thread_rng();
+        let mut small_rng = rand::rngs::SmallRng::from_rng(thread_rng).unwrap();
         for _ in 0..10000 {
-            let p: Vec3 = Vec3::map_to_range(rng.gen(), -1., 1.);
+            let p: Vec3 = Vec3::map_to_range(small_rng.gen(), -1., 1.);
             if p.length_squared() < 1. {
                 return p;
             }
