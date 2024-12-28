@@ -13,7 +13,7 @@ use std::sync::Arc;
 use camera::Camera;
 use hittable::Hittable;
 use hittable_list::HittableList;
-use material::{Lambertian, Scatterable, Metal};
+use material::{Dielectric, Lambertian, Metal, Scatterable};
 use ppm::write_color;
 use ray::Ray;
 use sphere::Sphere;
@@ -71,8 +71,8 @@ fn main() {
 
     // Materials
     let ground = material::Material::Lambertian(Lambertian::new(Color::color(0.8, 0.8, 0.0)));
-    let mat_center = material::Material::Lambertian(Lambertian::new(Color::color(0.7, 0.3, 0.3)));
-    let mat_left = material::Material::Metal(Metal::new(Color::color(0.8, 0.8, 0.8), 0.3));
+    let mat_center = material::Material::Lambertian(Lambertian::new(Color::color(0.1, 0.2, 0.5)));
+    let mat_left = material::Material::Dielectric(Dielectric::new(1.5));
     let mat_right = material::Material::Metal(Metal::new(Color::color(0.8, 0.6, 0.2), 1.0));
 
     // World
@@ -90,12 +90,12 @@ fn main() {
     world.add(Arc::new(Sphere::new(
         Point::point(1., 0., -1.),
         0.5,
-        mat_left,
+        mat_right,
     )));
     world.add(Arc::new(Sphere::new(
         Point::point(-1., 0., -1.),
         0.5,
-        mat_right,
+        mat_left,
     )));
     
     // Render in parallel

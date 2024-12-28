@@ -28,6 +28,7 @@ pub trait Scatterable {
 pub enum Material {
     Lambertian(Lambertian),
     Metal(Metal),
+    Dielectric(Dielectric),
 }
 
 impl Scatterable for Material {
@@ -35,6 +36,7 @@ impl Scatterable for Material {
         match self {
             Material::Lambertian(l) => l.scatter(in_ray, hit_record),
             Material::Metal(m) => m.scatter(in_ray, hit_record),
+            Material::Dielectric(d) => d.scatter(in_ray, hit_record),
         }
     }
 }
@@ -90,5 +92,43 @@ impl Scatterable for Metal {
 impl Metal {
     pub fn new(color: Color, fuzz:f64) -> Metal {
         Metal { albedo: color, fuzz: fuzz }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Dielectric {
+    refraction_index: f64,
+}
+
+impl Dielectric {
+    pub fn new(refraction_index: f64) -> Dielectric{
+        Dielectric { refraction_index }
+    }
+}
+
+impl Scatterable for Dielectric{
+    fn scatter(self, in_ray: Ray, hit_record: HitRecord) -> Option<ScatterRecord> {
+        let attenuation = Color::white();
+        let ri = if hit_record.front_face() {
+            1./self.refraction_index
+        } else {
+            self.refraction_index
+        };
+
+        let cos_theta = (-in_ray.direction()).dot(hit_record.normal()).min(1.);
+        let sin_theta = (1. - cos_theta*cos_theta).sqrt();
+
+        let direction = if ri * sin_theta > 1.{
+            // cannot refract, must reflect
+            in_ray.direction().reflect(hit_record.normal())
+        } else {
+            // can refract
+            in_ray.direction().refract(hit_record.normal(), ri)
+        };
+
+        Some(ScatterRecord {
+            ray: Ray::new(hit_record.p(), direction),
+            attenuation,
+        })
     }
 }
