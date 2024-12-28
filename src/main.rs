@@ -72,7 +72,7 @@ fn main() {
     // Materials
     let ground = material::Material::Lambertian(Lambertian::new(Color::color(0.8, 0.8, 0.0)));
     let mat_center = material::Material::Lambertian(Lambertian::new(Color::color(0.1, 0.2, 0.5)));
-    let mat_left = material::Material::Dielectric(Dielectric::new(1.5));
+    let mat_left = material::Material::Dielectric(Dielectric::new(1./1.33));
     let mat_right = material::Material::Metal(Metal::new(Color::color(0.8, 0.6, 0.2), 1.0));
 
     // World
