@@ -8,6 +8,8 @@ mod sphere;
 mod utils;
 mod vec3;
 
+use std::sync::Arc;
+
 use camera::Camera;
 use hittable::Hittable;
 use hittable_list::HittableList;
@@ -18,6 +20,7 @@ use sphere::Sphere;
 use utils::lerp;
 use vec3::{Color, Point, Vec3};
 
+use rayon::prelude::*;
 use rand::rngs::ThreadRng;
 use rand::Rng;
 
@@ -74,50 +77,51 @@ fn main() {
 
     // World
     let mut world: HittableList = HittableList::new();
-    world.add(Box::new(Sphere::new(
+    world.add(Arc::new(Sphere::new(
         Point::point(0., -100.5, -1.),
         100.,
         ground,
     )));
-    world.add(Box::new(Sphere::new(
+    world.add(Arc::new(Sphere::new(
         Point::point(0., 0., -1.),
         0.5,
         mat_center,
     )));
-    world.add(Box::new(Sphere::new(
+    world.add(Arc::new(Sphere::new(
         Point::point(1., 0., -1.),
         0.5,
         mat_left,
     )));
-    world.add(Box::new(Sphere::new(
+    world.add(Arc::new(Sphere::new(
         Point::point(-1., 0., -1.),
         0.5,
         mat_right,
     )));
-    // rng
-    let mut rng = rand::thread_rng();
+    
+    // Render in parallel
 
-    // Render
+    let mut buffer = vec![String::new(); (image_width * image_height) as usize];
 
-    let mut vec: Vec<String> = Vec::new();
+    buffer.par_iter_mut().enumerate().for_each(|(index, pixel_data)| {
+        let mut rng = rand::thread_rng();
+        let x = (index as i64) % image_width;
+        let y = image_height - 1 - (index as i64) / image_width; // Reverse y-axis
 
+        let mut pixel_color = Color::black();
+
+        for _ in 0..samples_per_pixel {
+            let u: f64 = (x as f64 + rng.gen::<f64>()) / (image_width as f64 - 1.);
+            let v: f64 = (y as f64 + rng.gen::<f64>()) / (image_height as f64 - 1.);
+            let ray: Ray = camera.get_ray(u, v);
+            pixel_color = pixel_color + ray_color(ray, &world, max_depth, &mut rng);
+        }
+
+        // Write the final color to the buffer
+        *pixel_data = write_color(pixel_color, samples_per_pixel);
+    });
     println!("P3");
     println!("{} {}", image_width, image_height);
     println!("255");
-    for y in (0..image_height).rev() {
-        eprint!("\rScanlines remaining: {}    ", y);
-        for x in 0..image_width {
-            let mut pixel_color: Color = Color::black();
-            for _ in 0..samples_per_pixel {
-                let u: f64 = (x as f64 + rng.gen::<f64>()) / (image_width as f64 - 1.);
-                let v: f64 = (y as f64 + rng.gen::<f64>()) / (image_height as f64 - 1.);
-                let ray: Ray = camera.get_ray(u, v);
-                pixel_color = pixel_color + ray_color(ray, &world, max_depth, &mut rng);
-            }
-
-            vec.push(write_color(pixel_color, samples_per_pixel));
-        }
-    }
-    println!("{}", vec.join("\n"));
+    println!("{}", buffer.join("\n"));
     eprintln!("\nDone.");
 }
