@@ -1,5 +1,6 @@
 use crate::hittable::HitRecord;
 use crate::ray::Ray;
+use crate::utils;
 use crate::vec3::{Color, Vec3};
 
 pub struct ScatterRecord {
@@ -104,6 +105,13 @@ impl Dielectric {
     pub fn new(refraction_index: f64) -> Dielectric{
         Dielectric { refraction_index }
     }
+
+    fn reflectance(cosine: f64, refraction_index: f64) -> f64 {
+        // Shlick's approximation for reflectance
+        let r0 = (1.- refraction_index) / (1.+refraction_index);
+        let r0 = r0*r0;
+        r0 + (1.-r0)*(1.-cosine).powi(5)
+    }
 }
 
 impl Scatterable for Dielectric{
@@ -118,8 +126,10 @@ impl Scatterable for Dielectric{
         let cos_theta = (-in_ray.direction()).dot(hit_record.normal()).min(1.);
         let sin_theta = (1. - cos_theta*cos_theta).sqrt();
 
-        let direction = if ri * sin_theta > 1.{
-            // cannot refract, must reflect
+        let cannot_refract: bool = ri * sin_theta > 1.;
+
+        let direction = if cannot_refract || Dielectric::reflectance(cos_theta, ri) > utils::random_double(){
+            // cannot refract, must reflect OR, sometimes a ray that would be refracted gets reflected instead, at reflectance rate
             in_ray.direction().reflect(hit_record.normal())
         } else {
             // can refract

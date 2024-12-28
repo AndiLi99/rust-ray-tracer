@@ -72,7 +72,8 @@ fn main() {
     // Materials
     let ground = material::Material::Lambertian(Lambertian::new(Color::color(0.8, 0.8, 0.0)));
     let mat_center = material::Material::Lambertian(Lambertian::new(Color::color(0.1, 0.2, 0.5)));
-    let mat_left = material::Material::Dielectric(Dielectric::new(1./1.33));
+    let mat_left = material::Material::Dielectric(Dielectric::new(1.5));
+    let mat_bubble = material::Material::Dielectric(Dielectric::new(1./1.5));
     let mat_right = material::Material::Metal(Metal::new(Color::color(0.8, 0.6, 0.2), 1.0));
 
     // World
@@ -83,7 +84,7 @@ fn main() {
         ground,
     )));
     world.add(Arc::new(Sphere::new(
-        Point::point(0., 0., -1.),
+        Point::point(0., 0., -1.2),
         0.5,
         mat_center,
     )));
@@ -97,7 +98,12 @@ fn main() {
         0.5,
         mat_left,
     )));
-    
+    world.add(Arc::new(Sphere::new(
+        Point::point(-1., 0., -1.),
+        0.4,
+        mat_bubble,
+    )));
+
     // Render in parallel
 
     let mut buffer = vec![String::new(); (image_width * image_height) as usize];
