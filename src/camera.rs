@@ -20,6 +20,10 @@ pub struct Camera {
 ///
 /// vertical fov = degrees of vertical view
 impl Camera {
+    pub fn new_from_direction(aspect_ratio: f64, v_fov: f64, focal_length: f64, lookfrom: Point, direction: Vec3, vup: Vec3) -> Camera{
+        let lookat = lookfrom + direction.unit_vector()*focal_length;
+        Camera::new(aspect_ratio, v_fov, lookfrom, lookat, vup)
+    }
     pub fn new(aspect_ratio: f64, v_fov: f64, lookfrom: Point, lookat: Point, vup: Vec3) -> Camera {
         // ration of height to focal length
         let focal_length = (lookfrom - lookat).length();
