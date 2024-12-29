@@ -2,6 +2,8 @@ use rand::distributions::{Distribution, Standard};
 use rand::{Rng, SeedableRng};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
+use crate::utils::{self, random_double, random_double_between};
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Vec3(pub f64, pub f64, pub f64);
 
@@ -172,5 +174,11 @@ impl Color {
     }
     pub fn white() -> Color {
         Vec3(1., 1., 1.)
+    }
+    pub fn random() -> Color {
+        Vec3(random_double(), random_double(), random_double())
+    }
+    pub fn random_between(min: f64, max:f64) -> Color {
+        Vec3(random_double_between(min, max), random_double_between(min, max), random_double_between(min, max))
     }
 }

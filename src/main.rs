@@ -14,10 +14,11 @@ use camera::Camera;
 use hittable::Hittable;
 use hittable_list::HittableList;
 use material::{Dielectric, Lambertian, Metal, Scatterable};
+use crate::material::Material;
 use ppm::write_color;
 use ray::Ray;
 use sphere::Sphere;
-use utils::lerp;
+use utils::{lerp, random_double, random_double_between};
 use vec3::{Color, Point, Vec3};
 
 use rayon::prelude::*;
@@ -57,58 +58,77 @@ fn ray_color<T: Hittable>(ray: Ray, world: &T, depth: i32, rng: &mut ThreadRng) 
 fn main() {
     // Image
     let aspect_ratio: f64 = 16.0 / 9.0; // width divided by height
-    let image_width: i64 = 400;
+    let image_width: i64 = 1200;
     let image_height: i64 = (image_width as f64 / aspect_ratio) as i64;
-    let samples_per_pixel: i64 = 100;
+    let samples_per_pixel: i64 = 500;
     let max_depth: i32 = 50;
 
     // Camera
 
     let v_fov: f64 = 20.;
 
-    let lookfrom = Point::point(-2., 2., 1.);
-    let lookat = Point::point(0., 0., -1.);
+    let lookfrom = Point::point(13., 2., 3.);
+    let lookat = Point::point(0., 0., 0.);
     let vup = Vec3(0., 1., 0.);
 
-    let defocus_angle = 10.;
-    let focus_distance = 3.4;
+    let defocus_angle = 0.6;
+    let focus_distance = 10.;
 
     let camera: Camera = Camera::new(aspect_ratio, v_fov, defocus_angle, focus_distance, lookfrom, lookat, vup);
 
     // Materials
-    let ground = material::Material::Lambertian(Lambertian::new(Color::color(0.8, 0.8, 0.0)));
-    let mat_center = material::Material::Lambertian(Lambertian::new(Color::color(0.1, 0.2, 0.5)));
-    let mat_left = material::Material::Dielectric(Dielectric::new(1.5));
-    let mat_bubble = material::Material::Dielectric(Dielectric::new(1./1.5));
-    let mat_right = material::Material::Metal(Metal::new(Color::color(0.8, 0.6, 0.2), 1.0));
+    let ground = material::Material::Lambertian(Lambertian::new(Color::color(0.5, 0.5, 0.5)));
+    let mat_1 = material::Material::Dielectric(Dielectric::new(1.5));
+    let mat_2 = material::Material::Lambertian(Lambertian::new(Color::color(0.1, 0.2, 0.5)));
+    let mat_3 = material::Material::Metal(Metal::new(Color::color(0.7, 0.6, 0.5), 0.));
 
     // World
     let mut world: HittableList = HittableList::new();
     world.add(Arc::new(Sphere::new(
-        Point::point(0., -100.5, -1.),
-        100.,
+        Point::point(0., -1000., 0.),
+        1000.,
         ground,
     )));
     world.add(Arc::new(Sphere::new(
-        Point::point(0., 0., -1.2),
-        0.5,
-        mat_center,
+        Point::point(0., 1., 0.),
+        1.,
+        mat_1,
     )));
     world.add(Arc::new(Sphere::new(
-        Point::point(1., 0., -1.),
-        0.5,
-        mat_right,
+        Point::point(-4., 1., 0.),
+        1.,
+        mat_2,
     )));
     world.add(Arc::new(Sphere::new(
-        Point::point(-1., 0., -1.),
-        0.5,
-        mat_left,
+        Point::point(4., 1., 0.),
+        1.,
+        mat_3,
     )));
-    world.add(Arc::new(Sphere::new(
-        Point::point(-1., 0., -1.),
-        0.4,
-        mat_bubble,
-    )));
+
+    for a in -11..11 {
+        for b in -11..11 {
+            let choose_mat = utils::random_double();
+            let center = Point::point(0.9*utils::random_double() + (a as f64), 0.2, 0.9*random_double() + (b as f64));
+
+            if (center - Vec3(4., 0.2, 0.)).length() > 0.9 {
+                if choose_mat < 0.8 {
+                    // diffuse
+                    let albedo = Color::random() * Color::random();
+                    let mat = Material::Lambertian(Lambertian::new(albedo));
+                    world.add(Arc::new(Sphere::new(center, 0.2, mat)));
+                } else if choose_mat < 0.95 {
+                    // metal
+                    let albedo = Color::random_between(0.5, 1.0);
+                    let fuzz = random_double_between(0., 0.5);
+                    let mat = Material::Metal(Metal::new(albedo, fuzz));
+                    world.add(Arc::new(Sphere::new(center, 0.2, mat)));
+                } else {
+                    // glass
+                    world.add(Arc::new(Sphere::new(center, 0.2, mat_1)));
+                }
+            }
+        }
+    }
 
     // Render in parallel
 
