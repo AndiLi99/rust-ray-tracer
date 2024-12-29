@@ -117,6 +117,17 @@ impl Vec3 {
         }
         panic!("Could not find a random vector in the unit sphere!")
     }
+    pub fn random_vec_in_unit_disk() -> Vec3 {
+        let thread_rng = rand::thread_rng();
+        let mut small_rng = rand::rngs::SmallRng::from_rng(thread_rng).unwrap();
+        for _ in 0..10000 {
+            let p: Vec3 = Vec3(small_rng.gen_range(-1.0..=1.0), small_rng.gen_range(-1.0..=1.0), 0.);
+            if p.length_squared() < 1. {
+                return p;
+            }
+        }
+        panic!("Could not find a random vector in the unit disk!")
+    }
     pub fn random_vec_on_unit_sphere() -> Vec3 {
         Vec3::random_vec_in_unit_sphere().unit_vector()
     }

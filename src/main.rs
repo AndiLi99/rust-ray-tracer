@@ -64,13 +64,16 @@ fn main() {
 
     // Camera
 
-    let vertical_fov: f64 = 20.;
+    let v_fov: f64 = 20.;
 
     let lookfrom = Point::point(-2., 2., 1.);
     let lookat = Point::point(0., 0., -1.);
     let vup = Vec3(0., 1., 0.);
 
-    let camera: Camera = Camera::new(aspect_ratio, vertical_fov, lookfrom, lookat, vup);
+    let defocus_angle = 10.;
+    let focus_distance = 3.4;
+
+    let camera: Camera = Camera::new(aspect_ratio, v_fov, defocus_angle, focus_distance, lookfrom, lookat, vup);
 
     // Materials
     let ground = material::Material::Lambertian(Lambertian::new(Color::color(0.8, 0.8, 0.0)));
